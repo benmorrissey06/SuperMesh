@@ -5,7 +5,7 @@ SuperMesh/
 ├── config/
 │   ├── ansible.cfg              # Ansible settings
 │   ├── bees.ini                 # Put the  Beelinks and the IPs
-│   └── depth_cameras.ini        # Inventory for the 4 depth-camera nodes
+│   
 │
 ├── setup/
 │   ├── ping.yml                 # test to make sure we talking with all the BeeLinks
