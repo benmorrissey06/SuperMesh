@@ -1,0 +1,61 @@
+---
+- name: Install Intel RealSense SDK and Python dependencys
+  hosts: bees
+  become: true
+
+  tasks:
+    - name: Clean up broken third-party apt repositories to allow updates
+      ansible.builtin.shell: rm -f /etc/apt/sources.list.d/*supercollider* /etc/apt/sources.list.d/*vscode*
+      ignore_errors: yes 
+
+    - name: Install basic system dependencies
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - software-properties-common
+          - curl 
+          - gnupg
+          - python3-pip
+          - python3-venv
+        state: present
+        update_cache: yes
+
+    - name: Ensure keyrings directory exists
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download Intel RealSense GPG key (modern apt-key alternative)
+      ansible.builtin.get_url:
+        url: https://librealsense.intel.com/Debian/apt-repo/archive.key
+        dest: /etc/apt/keyrings/librealsense.asc
+        mode: '0644'
+
+    - name: Add Intel RealSense repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/librealsense.asc] https://librealsense.intel.com/Debian/apt-repo jammy main"
+        state: present
+        filename: realsense-public
+
+    - name: Install RealSense kernel drivers and utils
+      ansible.builtin.apt:
+        name:
+          - librealsense2-dkms
+          - librealsense2-utils
+          - librealsense2-dev
+        state: present
+        update_cache: yes
+
+    - name: Create mesh_env and install Python computer vision libraries
+      ansible.builtin.pip:
+        name:
+          - pyrealsense2
+          - numpy
+          - opencv-python
+          - pyzmq
+        virtualenv: "/home/{{ ansible_user }}/mesh_env"
+        virtualenv_command: "python3 -m venv"
+      become: false #true?
+
+# ansible-playbook -i config/bees.ini setup/install_depth_camera.yml --limit 10.10.10.20,10.10.10.21
