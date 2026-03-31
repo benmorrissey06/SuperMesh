@@ -3,7 +3,7 @@
 ```
 SuperMesh/
 ├── config/
-│   ├── ansible.cfg              # Ansible settings
+│   ├── ansible.cfg              # Ansible settings 
 │   ├── bees.ini                 # Put the  Beelinks and the IPs
 │   
 │
