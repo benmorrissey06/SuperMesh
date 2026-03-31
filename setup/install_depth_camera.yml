@@ -59,3 +59,5 @@
       become: false #true?
 
 # ansible-playbook -i config/bees.ini setup/install_depth_camera.yml --limit 10.10.10.20,10.10.10.21
+
+#this does not work rn
