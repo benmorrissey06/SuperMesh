@@ -4,6 +4,8 @@ import numpy as np
 import pyrealsense2 as rs
 from pythonosc import udp_client
 import socket
+from pythonosc.dispatcher import Dispatcher
+from pythonosc.osc_server import BlockingOSCUDPServer
 
 # --- NETWORK SETUP ---
 def get_ip():
@@ -18,17 +20,31 @@ def get_ip():
     return ip
 
 device_ip = get_ip().replace(".", "_")
-OSC_IPS = ["10.10.10.19", "10.10.10.20", "10.10.10.21"]
+OSC_IPS = ["10.10.10.25"]
 OSC_PORT = 9001
 OSC_ADDRESS = "/blob" + device_ip
 clients = [udp_client.SimpleUDPClient(ip, OSC_PORT) for ip in OSC_IPS]
 
+# --- REMOTE CALIBRATION LISTENER ---
+def remote_calibrate_handler(address, *args):
+    global force_calibrate
+    print("Received remote calibration command from Master!")
+    force_calibrate = True
+
+force_calibrate = False
+dispatcher = Dispatcher()
+dispatcher.set_default_handler(remote_calibrate_handler)
+# We use port 9003 to receive, so it doesn't conflict with the sending port
+server = BlockingOSCUDPServer(("0.0.0.0", 9003), dispatcher) 
+import threading
+threading.Thread(target=server.serve_forever, daemon=True).start()
+
 # --- CHARUCO BOARD SETUP ---
 # Adjust these measurements (in meters) to match your physical printed board!
-SQUARES_X = 9
-SQUARES_Y = 9
-SQUARE_LENGTH = 0.015 
-MARKER_LENGTH = 0.011 
+SQUARES_X = 3
+SQUARES_Y = 3
+SQUARE_LENGTH = 0.027 
+MARKER_LENGTH = 0.02 
 
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_100)
 board = cv2.aruco.CharucoBoard((SQUARES_X, SQUARES_Y), SQUARE_LENGTH, MARKER_LENGTH, aruco_dict)
@@ -113,7 +129,7 @@ try:
                     cv2.putText(frame, "BOARD DETECTED! PRESS 'C' TO LOCK", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
                     
                     # If user presses 'c', lock in the math!
-                    if key == ord('c'):
+                    if key == ord('c') or force_calibrate:
                         R_matrix, _ = cv2.Rodrigues(rvec)
                         global_R_inv = R_matrix.T
                         global_tvec = tvec
