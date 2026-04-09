@@ -1,0 +1,25 @@
+#was meant to be a test, have not tried this though
+
+---
+- name: Deploy and Test Headless Tracker
+  hosts: all
+  tasks:
+    - name: Copy the headless tracking script
+      ansible.builtin.copy:
+        src: concepts/charuco_test_remote.py
+        dest: ~/charuco_test_remote.py
+        mode: '0755'
+
+    - name: Run the tracker for 30 seconds
+      ansible.builtin.command:
+        cmd: ~/tracking_venv/bin/python ~/charuco_test_remote.py
+      # We add an environment variable to force Python to print immediately
+      # rather than holding onto the text until the script ends.
+      environment:
+        PYTHONUNBUFFERED: "1"
+      # Ansible will wait for the script to finish (30s) and store the results here
+      register: tracker_output
+
+    - name: Display the results from the Beelinks
+      ansible.builtin.debug:
+        msg: "{{ tracker_output.stdout_lines }}"
