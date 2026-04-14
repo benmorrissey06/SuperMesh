@@ -1,6 +1,9 @@
 ls /sys/class/net
 # get name starts with w
 
+sudo nano /etc/netplan/99-headless-wifi.yaml
+
+# edit
 network:
   version: 2
   renderer: networkd
@@ -13,4 +16,9 @@ network:
 
 #wlan0 = output from ls/sys/class/net
 sudo chmod 600 /etc/netplan/99-headless-wifi.yaml
+
+sudo netplan apply
+
+sudo poweroff
+
 
