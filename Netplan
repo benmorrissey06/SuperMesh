@@ -1,3 +1,6 @@
+ls /sys/class/net
+# get name starts with w
+
 network:
   version: 2
   renderer: networkd
@@ -5,9 +8,9 @@ network:
     wlan0:
       dhcp4: true
       access-points:
-        "Your_Lab_WiFi":
-          password: "Your_Password"
+        "L42i_Large":
+          password: "l42ilabwifi"
 
-
+#wlan0 = output from ls/sys/class/net
 sudo chmod 600 /etc/netplan/99-headless-wifi.yaml
 
