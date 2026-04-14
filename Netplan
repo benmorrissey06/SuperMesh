@@ -8,3 +8,6 @@ network:
         "Your_Lab_WiFi":
           password: "Your_Password"
 
+
+sudo chmod 600 /etc/netplan/99-headless-wifi.yaml
+
