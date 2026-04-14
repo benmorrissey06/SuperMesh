@@ -1,0 +1,15 @@
+---
+- hosts: all
+  tasks:
+    - name: Ensure the calibration directory exists
+      ansible.builtin.file:
+        path: ~/camera_calibration
+        state: directory
+        mode: '0755'
+
+    - name: Copy charuco_test.py to all machines
+      ansible.builtin.copy:
+        src: ../charuco_test.py
+        dest: ~/camera_calibration/charuco_test.py
+        mode: '0755'
+    
