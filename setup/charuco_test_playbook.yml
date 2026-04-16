@@ -11,8 +11,8 @@
 
   tasks:
     - name: stop any old headless scripts
-      shell: "pkill -f headless_script.py"
-      ignore_errors: yes
+      shell: "pkill -f [h]eadless_script.py"
+      failed_when: false
       become: no
 
     - name: verify script exists

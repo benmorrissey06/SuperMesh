@@ -1,0 +1,19 @@
+# env ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i config/bees.ini setup/stop_scripts.yml -k -K
+---
+- hosts: all
+  tasks:
+    - name: stop the headless tracking scripts
+      shell: "pkill -f [h]eadless_script.py"
+      failed_when: false
+      become: no
+
+    - name: verify scripts are stopped
+      shell: "pgrep -f headless_script.py"
+      register: pgrep_result
+      failed_when: false
+      become: no
+
+    - name: report status
+      debug:
+        msg: "Scripts stopped on {{ inventory_hostname }}"
+      when: pgrep_result.rc != 0
