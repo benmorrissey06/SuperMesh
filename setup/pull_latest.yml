@@ -1,0 +1,45 @@
+
+#This playbook clones the repo on all machines, and pulls latest changes if it's already there. Also prints stuff out.
+#ansible-playbook -i config/bees.ini setup/pull_latest.yml -k -K
+---
+- hosts: all
+  vars:
+    repo_url: "https://github.com/benmorrissey06/SuperMesh.git"
+    dest_path: "/home/{{ ansible_user }}/SuperMesh"
+    branch: "main"
+
+  tasks:
+    - name: ensure git is installed
+      ansible.builtin.apt:
+        name: git
+        state: present
+        update_cache: yes
+      become: yes
+
+    - name: clone or pull the latest changes
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ dest_path }}"
+        version: "{{ branch }}"
+        update: yes
+        force: yes
+      become: no
+      register: git_status
+
+    - name: status message - new clone
+      debug:
+        msg: "cloned the repo for the first time on {{ inventory_hostname }}"
+      when: git_status.before == None
+
+    - name: status message - updated
+      debug:
+        msg: "pulled new changes on {{ inventory_hostname }}: {{ git_status.before[0:7] }} -> {{ git_status.after[0:7] }}"
+      when: 
+        - git_status.changed
+        - git_status.before != None
+        - git_status.before != git_status.after
+
+    - name: status message - up to date
+      debug:
+        msg: "repo is already at the latest version on {{ inventory_hostname }}"
+      when: not git_status.changed

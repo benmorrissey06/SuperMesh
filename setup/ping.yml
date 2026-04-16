@@ -5,5 +5,5 @@
     - action: ping
 
 
-# ansible-playbook -k -i config/bees.ini setup/ping.yml  
+# THIS ONE ---> ansible-playbook -k -i config/bees.ini setup/ping.yml  
 # ansible-playbook -i config/bees.ini setup/ping.yml  
