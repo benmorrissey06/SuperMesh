@@ -1,3 +1,4 @@
+#Receives data from all 4 nodes, working
 import time
 import math
 import numpy as np

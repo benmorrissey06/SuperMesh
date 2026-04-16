@@ -1,3 +1,4 @@
+#PRIMARY SCRIPT FOR HEADLESS NODES, works.
 import cv2
 import cv2.aruco as aruco
 import numpy as np
