@@ -17,3 +17,17 @@
           - python-osc
         virtualenv: ~/tracking_venv
         virtualenv_command: python3 -m venv
+
+
+#COMMAND WORKS FOR ALL 4 MACHINES
+#ansible-playbook -i config/bees.ini setup/ping.yml -k -K
+
+
+
+
+
+#Need this if SSH key changes, but above command should suffice
+# env ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i config/bees.ini setup/ping.yml -k -K
+
+        #ANSIBLE_HOST_KEY_CHECKING=False prevents Ansible from blocking connections if a Beelink's SSH identity
+  ##prompt for the sudo password, which is required for the installation tasks to succeed.
