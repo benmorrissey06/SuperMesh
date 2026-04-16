@@ -1,15 +1,36 @@
+# this playbook runs the headless tracking script on all beelinks
+# it kills any old versions first so they dont conflict
+
+#command is below, but make sure to run pull_latest.yml first to get the script on there
+#env ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i config/bees.ini setup/charuco_test_playbook.yml -k -K
 ---
 - hosts: all
-  tasks:
-    - name: Ensure the calibration directory exists
-      ansible.builtin.file:
-        path: ~/camera_calibration
-        state: directory
-        mode: '0755'
+  vars:
+    venv_path: "/home/{{ ansible_user }}/tracking_venv"
+    script_path: "/home/{{ ansible_user }}/SuperMesh/concepts/headless_script.py"
 
-    - name: Copy charuco_test.py to all machines
-      ansible.builtin.copy:
-        src: ../charuco_test.py
-        dest: ~/camera_calibration/charuco_test.py
-        mode: '0755'
-    
+  tasks:
+    - name: stop any old headless scripts
+      shell: "pkill -f headless_script.py"
+      ignore_errors: yes
+      become: no
+
+    - name: verify script exists
+      stat:
+        path: "{{ script_path }}"
+      register: script_stat
+
+    - name: fail if script is missing
+      fail:
+        msg: "The script was not found at {{ script_path }}. Please run pull_latest.yml first."
+      when: not script_stat.stat.exists
+
+    - name: run the headless script
+      shell: "nohup {{ venv_path }}/bin/python3 {{ script_path }} > /home/{{ ansible_user }}/headless_log.txt 2>&1 &"
+      async: 10
+      poll: 0
+      become: no
+
+    - name: check if it started okay
+      debug:
+        msg: "headless script is running on {{ inventory_hostname }}. check ~/headless_log.txt for logs."
