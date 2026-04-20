@@ -27,17 +27,26 @@ OSC_PORT = 9001
 OSC_ADDRESS = "/blob_" + device_ip
 clients = [udp_client.SimpleUDPClient(ip, OSC_PORT) for ip in OSC_IPS]
 
-# --- REMOTE CALIBRATION LISTENER ---
-def remote_calibrate_handler(address, *args):
+# --- REMOTE COMMAND LISTENERS ---
+force_calibrate = False
+keep_running = True # New flag to control the main loop
+
+def calibrate_handler(address, *args):
     global force_calibrate
-    print("\n[OSC] Received remote calibration command from Master!")
+    print("\n[OSC] Received CALIBRATE command from Master!")
     force_calibrate = True
 
-force_calibrate = False
+def quit_handler(address, *args):
+    global keep_running
+    print("\n[OSC] Received QUIT command from Master! Initiating shutdown...")
+    keep_running = False
+
 dispatcher = Dispatcher()
-dispatcher.set_default_handler(remote_calibrate_handler)
-# We use port 9003 to receive, so it doesn't conflict with the sending port
-server = BlockingOSCUDPServer(("0.0.0.0", 9003), dispatcher) 
+# Map specific addresses instead of a catch-all default
+dispatcher.map("/calibrate", calibrate_handler)
+dispatcher.map("/quit", quit_handler)
+
+server = BlockingOSCUDPServer(("0.0.0.0", 9003), dispatcher)
 threading.Thread(target=server.serve_forever, daemon=True).start()
 
 # --- CHARUCO BOARD SETUP ---
@@ -88,7 +97,7 @@ print("Waiting for Master Node to send Calibration Command...")
 last_print_time = time.time()
 
 try:
-    while True:
+    while keep_running:
         frames = pipeline.wait_for_frames()
         aligned_frames = align.process(frames)
         depth_frame = aligned_frames.get_depth_frame()
@@ -177,7 +186,7 @@ try:
                     global_Z = float(global_pt_matrix[2][0])
 
                     # Optional: Comment this out later if you don't want massive log files
-                    print(f"Blob {blob_count} | X: {global_X:.2f}m, Y: {global_Y:.2f}m, Z: {global_Z:.2f}m")
+                    # print(f"Blob {blob_count} | X: {global_X:.2f}m, Y: {global_Y:.2f}m, Z: {global_Z:.2f}m")
 
                     for client in clients:
                         try:
