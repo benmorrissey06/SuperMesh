@@ -22,7 +22,7 @@ def get_ip():
     return ip
 
 device_ip = get_ip().replace(".", "_")
-OSC_IPS = ["10.10.10.25"]
+OSC_IPS = ["10.10.10.1"]
 OSC_PORT = 9001
 OSC_ADDRESS = "/blob_" + device_ip
 clients = [udp_client.SimpleUDPClient(ip, OSC_PORT) for ip in OSC_IPS]
@@ -109,8 +109,7 @@ try:
             
             if charuco_corners is not None and len(charuco_corners) > 3:
                 obj_points, img_points = board.matchImagePoints(charuco_corners, charuco_ids)
-                success, rvec, tvec = cv2.solvePnP(obj_points, img_points, camera_matrix, dist_coeffs)
-                
+                success, rvec, tvec = cv2.solvePnP(obj_points, img_points, camera_matrix, dist_coeffs, flags=cv2.SOLVEPNP_IPPE)
                 if success:
                     # Throttle the "Board Detected" print & OSC message so it doesn't spam
                     if time.time() - last_print_time > 2.0:
