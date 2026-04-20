@@ -1,4 +1,3 @@
-#PRIMARY SCRIPT FOR HEADLESS NODES, works.
 import cv2
 import cv2.aruco as aruco
 import numpy as np
@@ -42,10 +41,10 @@ server = BlockingOSCUDPServer(("0.0.0.0", 9003), dispatcher)
 threading.Thread(target=server.serve_forever, daemon=True).start()
 
 # --- CHARUCO BOARD SETUP ---
-SQUARES_X = 3
-SQUARES_Y = 3
-SQUARE_LENGTH = 0.027 
-MARKER_LENGTH = 0.02 
+SQUARES_X = 5
+SQUARES_Y = 5
+SQUARE_LENGTH = 0.22
+MARKER_LENGTH = 0.165
 
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_100)
 board = cv2.aruco.CharucoBoard((SQUARES_X, SQUARES_Y), SQUARE_LENGTH, MARKER_LENGTH, aruco_dict)
@@ -113,20 +112,33 @@ try:
                 success, rvec, tvec = cv2.solvePnP(obj_points, img_points, camera_matrix, dist_coeffs)
                 
                 if success:
-                    # Throttle the "Board Detected" print so it doesn't spam the logs
+                    # Throttle the "Board Detected" print & OSC message so it doesn't spam
                     if time.time() - last_print_time > 2.0:
                         print("Board visible. Ready and waiting for remote calibration trigger...")
                         last_print_time = time.time()
+                        
+                        # --- ADD THIS: Tell master the board is visible ---
+                        for client in clients:
+                            try:
+                                client.send_message("/status_" + device_ip, "Board Visible")
+                            except BlockingIOError:
+                                pass
                     
                     if force_calibrate:
                         R_matrix, _ = cv2.Rodrigues(rvec)
                         global_R_inv = R_matrix.T
                         global_tvec = tvec
                         is_calibrated = True
-                        force_calibrate = False # Reset the flag
+                        force_calibrate = False 
                         print("\n--- CALIBRATION SUCCESSFUL ---")
-                        print("Switched to Global Tracking Mode. Sending Blobs...")
-            continue # Skip blob tracking until calibrated
+                        
+                        # --- ADD THIS: Tell master we are calibrated ---
+                        for client in clients:
+                            try:
+                                client.send_message("/status_" + device_ip, "Tracking")
+                            except BlockingIOError:
+                                pass
+            continue
 
 
         # ==========================================
