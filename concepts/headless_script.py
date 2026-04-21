@@ -22,7 +22,7 @@ def get_ip():
     return ip
 
 device_ip = get_ip().replace(".", "_")
-OSC_IPS = ["10.10.10.1"]
+OSC_IPS = ["10.10.10.3"]
 OSC_PORT = 9001
 OSC_ADDRESS = "/blob_" + device_ip
 clients = [udp_client.SimpleUDPClient(ip, OSC_PORT) for ip in OSC_IPS]
