@@ -1,15 +1,15 @@
-#WORKING, successfully did for 19 and 21
+# This playbook installs Python dependencies AND hardware permissions for RealSense cameras
 ---
 - hosts: all
   tasks:
-    - name: Ensure python3-venv is installed (Required for Ubuntu/Debian systems)
+    - name: Ensure python3-venv is installed
       ansible.builtin.apt:
         name: python3-venv
         state: present
         update_cache: yes
-      become: yes  # This tells Ansible to use sudo for this specific step
+      become: yes
 
-    - name: Install tracking dependencies into a safe virtual environment
+    - name: Install tracking dependencies into virtualenv
       ansible.builtin.pip:
         name:
           - "opencv-contrib-python>=4.8.0"
@@ -18,16 +18,13 @@
         virtualenv: ~/tracking_venv
         virtualenv_command: python3 -m venv
 
+    - name: Install RealSense hardware rules (udev)
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/IntelRealSense/librealsense/master/config/99-realsense-libusb.rules
+        dest: /etc/udev/rules.d/99-realsense-libusb.rules
+        mode: '0644'
+      become: yes
 
-#COMMAND WORKS FOR ALL 4 MACHINES
-#ansible-playbook -i config/bees.ini setup/ping.yml -k -K
-
-
-
-
-
-#Need this if SSH key changes, but above command should suffice
-# env ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i config/bees.ini setup/ping.yml -k -K
-
-        #ANSIBLE_HOST_KEY_CHECKING=False prevents Ansible from blocking connections if a Beelink's SSH identity
-  ##prompt for the sudo password, which is required for the installation tasks to succeed.
+    - name: Apply hardware rules
+      ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
+      become: yes
