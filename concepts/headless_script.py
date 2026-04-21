@@ -70,7 +70,12 @@ config = rs.config()
 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 
-profile = pipeline.start(config)
+try:
+    profile = pipeline.start(config)
+except Exception as e:
+    for client in clients:
+        client.send_message("/status_" + device_ip, f"ERROR: {str(e)}")
+    raise e
 
 depth_sensor = profile.get_device().first_depth_sensor()
 depth_scale = depth_sensor.get_depth_scale()

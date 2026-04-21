@@ -56,6 +56,8 @@ def osc_handler(address, *args):
         
     elif "status" in address and len(args) == 1:
         # Update status (e.g., "Board Visible")
+        if camera_statuses[node_ip] != args[0]:
+            print(f"[STATUS UPDATE] Node {node_ip}: {args[0]}")
         camera_statuses[node_ip] = args[0]
 
 # --- MAPPING MATH ---
