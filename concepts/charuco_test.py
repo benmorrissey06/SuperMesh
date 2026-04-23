@@ -41,10 +41,10 @@ threading.Thread(target=server.serve_forever, daemon=True).start()
 
 # --- CHARUCO BOARD SETUP ---
 # Adjust these measurements (in meters) to match your physical printed board!
-SQUARES_X = 3
-SQUARES_Y = 3
-SQUARE_LENGTH = 0.027 
-MARKER_LENGTH = 0.02 
+SQUARES_X = 5
+SQUARES_Y = 5
+SQUARE_LENGTH = 0.22
+MARKER_LENGTH = 0.165 
 
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_100)
 board = cv2.aruco.CharucoBoard((SQUARES_X, SQUARES_Y), SQUARE_LENGTH, MARKER_LENGTH, aruco_dict)
