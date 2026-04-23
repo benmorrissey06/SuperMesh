@@ -8,6 +8,7 @@ from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
 import threading
 import time
+import sys
 
 # --- NETWORK SETUP ---
 def get_ip():
