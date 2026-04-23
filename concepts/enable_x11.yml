@@ -1,0 +1,26 @@
+#This is for viewing the camera
+#Download xquartz
+#make sure this is on all beelinks (on .19 and .20)
+# ssh -X l42i@10.10.10.xx 
+# enter environment and run python3 charuco_test.py
+# e
+
+
+- name: Enable X11 Forwarding for Camera Previews
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure X11 packages are installed
+      apt:
+        name: [xauth, x11-apps]
+        state: present
+        update_cache: yes
+
+    - name: Configure SSH for X11 Forwarding
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?{{ item.key }}"
+        line: "{{ item.key }} {{ item.value }}"
+      loop:
+        - { key: "X11Forwarding", value: "yes" }
+        - { key: "X11DisplayOffset", value: "10" }
