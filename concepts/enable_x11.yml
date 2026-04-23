@@ -3,7 +3,7 @@
 #make sure this is on all beelinks (on .19 and .20)
 # ssh -X l42i@10.10.10.xx 
 # enter environment and run python3 charuco_test.py
-# e
+#ansible-playbook -i config/bees.ini setup/enable_x11.yml
 
 
 - name: Enable X11 Forwarding for Camera Previews
@@ -24,3 +24,5 @@
       loop:
         - { key: "X11Forwarding", value: "yes" }
         - { key: "X11DisplayOffset", value: "10" }
+
+
