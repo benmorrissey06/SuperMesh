@@ -1,4 +1,5 @@
 # This playbook installs Python dependencies AND hardware permissions for RealSense cameras
+#env ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i config/bees.ini setup/install_depth_cameras.yml -k -K
 ---
 - hosts: all
   tasks:
