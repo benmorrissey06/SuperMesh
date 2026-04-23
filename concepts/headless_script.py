@@ -8,6 +8,7 @@ from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
 import threading
 import time
+import sys
 
 # --- NETWORK SETUP ---
 def get_ip():
@@ -22,7 +23,13 @@ def get_ip():
     return ip
 
 device_ip = get_ip().replace(".", "_")
-OSC_IPS = ["10.10.10.3"]
+if len(sys.argv) > 1:
+    master_ip = sys.argv[1]
+    OSC_IPS = [master_ip]
+    print(f"Master IP set dynamically to: {master_ip}")
+else:
+    OSC_IPS = ["10.10.10.3"] # Fallback just in case
+    print(f"No IP passed, defaulting to: {OSC_IPS[0]}")
 OSC_PORT = 9001
 OSC_ADDRESS = "/blob_" + device_ip
 clients = [udp_client.SimpleUDPClient(ip, OSC_PORT) for ip in OSC_IPS]
