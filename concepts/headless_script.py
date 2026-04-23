@@ -27,18 +27,27 @@ OSC_PORT = 9001
 OSC_ADDRESS = "/blob_" + device_ip
 clients = [udp_client.SimpleUDPClient(ip, OSC_PORT) for ip in OSC_IPS]
 
+# --- REMOTE LOGGING ---
+def remote_print(msg):
+    print(msg) # Print locally to file
+    for client in clients:
+        try:
+            client.send_message("/log_" + device_ip, msg)
+        except:
+            pass
+
 # --- REMOTE COMMAND LISTENERS ---
 force_calibrate = False
 keep_running = True # New flag to control the main loop
 
 def calibrate_handler(address, *args):
     global force_calibrate
-    print("\n[OSC] Received CALIBRATE command from Master!")
+    remote_print("\n[OSC] Received CALIBRATE command from Master!")
     force_calibrate = True
 
 def quit_handler(address, *args):
     global keep_running
-    print("\n[OSC] Received QUIT command from Master! Initiating shutdown...")
+    remote_print("\n[OSC] Received QUIT command from Master! Initiating shutdown...")
     keep_running = False
 
 dispatcher = Dispatcher()
@@ -95,9 +104,9 @@ backsub = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=40)
 MIN_BLOB_AREA = 2500
 dilation_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
 
-print("=== HEADLESS SYSTEM READY ===")
-print(f"Node IP: {device_ip}")
-print("Waiting for Master Node to send Calibration Command...")
+remote_print("=== HEADLESS SYSTEM READY ===")
+remote_print(f"Node IP: {device_ip}")
+remote_print("Waiting for Master Node to send Calibration Command...")
 
 last_print_time = time.time()
 
@@ -127,7 +136,7 @@ try:
                 if success:
                     # Throttle the "Board Detected" print & OSC message so it doesn't spam
                     if time.time() - last_print_time > 2.0:
-                        print("Board visible. Ready and waiting for remote calibration trigger...")
+                        remote_print("Board visible. Ready and waiting for remote calibration trigger...")
                         last_print_time = time.time()
                         
                         # --- ADD THIS: Tell master the board is visible ---
@@ -143,7 +152,7 @@ try:
                         global_tvec = tvec
                         is_calibrated = True
                         force_calibrate = False 
-                        print("\n--- CALIBRATION SUCCESSFUL ---")
+                        remote_print("\n--- CALIBRATION SUCCESSFUL ---")
                         
                         # --- ADD THIS: Tell master we are calibrated ---
                         for client in clients:
@@ -200,8 +209,8 @@ try:
                             pass
 
 except KeyboardInterrupt:
-    print("\nProcess manually terminated via KeyboardInterrupt.")
+    remote_print("\nProcess manually terminated via KeyboardInterrupt.")
 
 finally:
-    print("Stopping pipeline...")
+    remote_print("Stopping pipeline...")
     pipeline.stop()

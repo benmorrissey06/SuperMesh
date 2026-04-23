@@ -59,6 +59,10 @@ def osc_handler(address, *args):
         if camera_statuses[node_ip] != args[0]:
             print(f"[STATUS UPDATE] Node {node_ip}: {args[0]}")
         camera_statuses[node_ip] = args[0]
+        
+    elif "log" in address and len(args) == 1:
+        # Print raw log messages from the node
+        print(f"[{node_ip} LOG] {args[0]}")
 
 # --- MAPPING MATH ---
 def meters_to_pixels(x, z, map_size=800, scale=4.0):
