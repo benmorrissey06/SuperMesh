@@ -1,0 +1,14 @@
+ 1. Fix Sudo (Switch to traditional version)
+  This prevents Ansible from timing out while waiting for a password prompt.
+
+   1 echo henryhenrik | sudo -S update-alternatives --set sudo /usr/bin/sudo.ws
+
+  2. Fix Camera Permissions (udev rules)
+  This allows your remote scripts to access the RealSense hardware without needing a monitor plugged in.
+
+   1 sudo curl -s
+     https://raw.githubusercontent.com/IntelRealSense/librealsense/master/config/99-realsense-libusb.rules
+     -o /etc/udev/rules.d/99-realsense-libusb.rules
+
+  3. Apply the Changes
+   1 sudo udevadm control --reload-rules && sudo udevadm trigger
