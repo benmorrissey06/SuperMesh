@@ -15,7 +15,7 @@
 # This is yolo stuff
 
 - name: Install SuperMesh tracking dependencies on Beelink nodes
-  hosts: beelinks
+  hosts: bees
   become: true
 
   vars:
