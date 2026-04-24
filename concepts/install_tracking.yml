@@ -1,0 +1,132 @@
+---
+# install_tracking.yml
+# Installs all SuperMesh node dependencies on every Beelink.
+# Run from your Mac: ansible-playbook -i config/bees.ini setup/install_tracking.yml
+#
+# What gets installed:
+#   - System packages: git, python3-pip, python3-venv, libusb (for RealSense)
+#   - Python (in tracking_venv):
+#       opencv-contrib-python  — ArUco + ChArUco support
+#       pyrealsense2           — Intel RealSense SDK Python bindings
+#       python-osc             — OSC send/receive
+#       ultralytics            — YOLOv8 (pulls in torch, torchvision automatically)
+#       numpy                  — matrix math
+#   - YOLOv8n model pre-downloaded so first run isn't slow
+
+- name: Install SuperMesh tracking dependencies on Beelink nodes
+  hosts: beelinks
+  become: true
+
+  vars:
+    venv_path: "/home/{{ ansible_user }}/tracking_venv"
+    repo_path:  "/home/{{ ansible_user }}/SuperMesh"
+    yolo_model: "yolov8n.pt"
+
+  tasks:
+
+    # ------------------------------------------------------------------
+    # SYSTEM PACKAGES
+    # ------------------------------------------------------------------
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install system dependencies
+      apt:
+        name:
+          - git
+          - python3-pip
+          - python3-venv
+          - libusb-1.0-0          # required by pyrealsense2
+          - v4l-utils             # useful for camera debugging
+        state: present
+
+    # ------------------------------------------------------------------
+    # INTEL REALSENSE SDK (librealsense2)
+    # The pip package pyrealsense2 bundles its own native lib for x86,
+    # but registering Intel's apt repo gives you firmware tools too.
+    # ------------------------------------------------------------------
+    - name: Add Intel RealSense apt key
+      apt_key:
+        url: https://librealsense.intel.com/Debian/librealsense.pgp
+        state: present
+
+    - name: Add Intel RealSense apt repo
+      apt_repository:
+        repo: "deb https://librealsense.intel.com/Debian/apt-repo {{ ansible_distribution_release }} main"
+        state: present
+        filename: librealsense
+
+    - name: Install librealsense2 utilities
+      apt:
+        name:
+          - librealsense2-utils
+          - librealsense2-dev
+        state: present
+        update_cache: yes
+
+    # ------------------------------------------------------------------
+    # PYTHON VIRTUAL ENVIRONMENT
+    # ------------------------------------------------------------------
+    - name: Create tracking_venv
+      become: false
+      command: python3 -m venv {{ venv_path }}
+      args:
+        creates: "{{ venv_path }}/bin/activate"
+
+    - name: Upgrade pip inside venv
+      become: false
+      pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ venv_path }}"
+
+    # ------------------------------------------------------------------
+    # PYTHON PACKAGES
+    # Note: ultralytics pulls torch + torchvision — takes a few minutes.
+    # opencv-contrib-python includes the ArUco/ChArUco modules.
+    # ------------------------------------------------------------------
+    - name: Install Python packages into venv
+      become: false
+      pip:
+        name:
+          - "numpy>=1.24"
+          - "opencv-contrib-python>=4.8.0"
+          - "pyrealsense2"
+          - "python-osc"
+          - "ultralytics"        # YOLOv8 — installs torch automatically
+        state: present
+        virtualenv: "{{ venv_path }}"
+
+    # ------------------------------------------------------------------
+    # PRE-DOWNLOAD YOLO MODEL
+    # Runs a tiny Python snippet that triggers the automatic download,
+    # so the first real run doesn't pause waiting for the network.
+    # ------------------------------------------------------------------
+    - name: Pre-download YOLOv8n model weights
+      become: false
+      shell: |
+        {{ venv_path }}/bin/python -c "from ultralytics import YOLO; YOLO('{{ yolo_model }}')"
+      args:
+        chdir: "{{ repo_path }}"
+      register: yolo_download
+      changed_when: "'Downloading' in yolo_download.stderr"
+
+    # ------------------------------------------------------------------
+    # VERIFY
+    # ------------------------------------------------------------------
+    - name: Verify OpenCV + ArUco available
+      become: false
+      shell: |
+        {{ venv_path }}/bin/python -c "
+        import cv2, cv2.aruco, pyrealsense2, ultralytics
+        print('opencv:', cv2.__version__)
+        print('ultralytics:', ultralytics.__version__)
+        print('All imports OK')
+        "
+      register: verify_out
+
+    - name: Show verification output
+      debug:
+        msg: "{{ verify_out.stdout_lines }}"
