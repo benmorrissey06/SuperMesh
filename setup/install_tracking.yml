@@ -3,15 +3,8 @@
 # Installs all SuperMesh node dependencies on every Beelink.
 # Run from your Mac: ansible-playbook -i config/bees.ini setup/install_tracking.yml
 #
-# What gets installed:
-#   - System packages: git, python3-pip, python3-venv, libusb (for RealSense)
-#   - Python (in tracking_venv):
-#       opencv-contrib-python  — ArUco + ChArUco support
-#       pyrealsense2           — Intel RealSense SDK Python bindings
-#       python-osc             — OSC send/receive
-#       ultralytics            — YOLOv8 (pulls in torch, torchvision automatically)
-#       numpy                  — matrix math
-#   - YOLOv8n model pre-downloaded so first run isn't slow
+# NOTE: We skip Intel's librealsense apt repo — it returns 403 on Ubuntu "questing".
+# The pip package pyrealsense2 bundles its own native libs and is all we need.
 
 - name: Install SuperMesh tracking dependencies on Beelink nodes
   hosts: bees
@@ -26,6 +19,7 @@
 
     # ------------------------------------------------------------------
     # SYSTEM PACKAGES
+    # libusb-1.0-0 is the only system dep pyrealsense2 needs
     # ------------------------------------------------------------------
     - name: Update apt cache
       apt:
@@ -38,42 +32,9 @@
           - git
           - python3-pip
           - python3-venv
-          - libusb-1.0-0          # required by pyrealsense2
-          - v4l-utils             # useful for camera debugging
+          - libusb-1.0-0
+          - v4l-utils
         state: present
-
-    # ------------------------------------------------------------------
-    # INTEL REALSENSE SDK (librealsense2)
-    # Uses the modern gpg dearmor method (apt-key is deprecated in
-    # Ubuntu 22.04+ / Debian 12+).
-    # ------------------------------------------------------------------
-    - name: Install curl and gpg (needed for key download)
-      apt:
-        name:
-          - curl
-          - gpg
-        state: present
-
-    - name: Download Intel RealSense GPG key
-      shell: |
-        curl -fsSL https://librealsense.intel.com/Debian/librealsense.pgp \
-          | gpg --dearmor -o /usr/share/keyrings/librealsense.gpg
-      args:
-        creates: /usr/share/keyrings/librealsense.gpg
-
-    - name: Add Intel RealSense apt repo (signed-by)
-      apt_repository:
-        repo: "deb [signed-by=/usr/share/keyrings/librealsense.gpg] https://librealsense.intel.com/Debian/apt-repo {{ ansible_distribution_release }} main"
-        state: present
-        filename: librealsense
-
-    - name: Install librealsense2 utilities
-      apt:
-        name:
-          - librealsense2-utils
-          - librealsense2-dev
-        state: present
-        update_cache: yes
 
     # ------------------------------------------------------------------
     # PYTHON VIRTUAL ENVIRONMENT
@@ -93,8 +54,9 @@
 
     # ------------------------------------------------------------------
     # PYTHON PACKAGES
-    # Note: ultralytics pulls torch + torchvision — takes a few minutes.
-    # opencv-contrib-python includes the ArUco/ChArUco modules.
+    # ultralytics pulls torch + torchvision — takes a few minutes.
+    # opencv-contrib-python includes ArUco/ChArUco modules.
+    # pyrealsense2 from pip bundles the native RealSense lib — no apt repo needed.
     # ------------------------------------------------------------------
     - name: Install Python packages into venv
       become: false
@@ -104,14 +66,12 @@
           - "opencv-contrib-python>=4.8.0"
           - "pyrealsense2"
           - "python-osc"
-          - "ultralytics"        # YOLOv8 — installs torch automatically
+          - "ultralytics"
         state: present
         virtualenv: "{{ venv_path }}"
 
     # ------------------------------------------------------------------
     # PRE-DOWNLOAD YOLO MODEL
-    # Runs a tiny Python snippet that triggers the automatic download,
-    # so the first real run doesn't pause waiting for the network.
     # ------------------------------------------------------------------
     - name: Pre-download YOLOv8n model weights
       become: false
@@ -125,7 +85,7 @@
     # ------------------------------------------------------------------
     # VERIFY
     # ------------------------------------------------------------------
-    - name: Verify OpenCV + ArUco available
+    - name: Verify all imports work
       become: false
       shell: |
         {{ venv_path }}/bin/python -c "
