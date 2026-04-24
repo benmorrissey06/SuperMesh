@@ -47,7 +47,8 @@ device_ip = get_ip().replace(".", "_")
 if len(sys.argv) > 1:
     master_ip = sys.argv[1]
 else:
-    master_ip = "10.10.10.9"
+    master_ip = "10.10.10.9" \
+    ""
 
 OSC_PORT_OUT = 9001   # port Master listens on
 OSC_PORT_IN  = 9003   # port this node listens on
@@ -199,7 +200,7 @@ def pixel_to_global(px, py, depth_m):
     cam_pt = rs.rs2_deproject_pixel_to_point(intrinsics, [px, py], depth_m)
     cam_mat = np.array([[cam_pt[0]], [cam_pt[1]], [cam_pt[2]]])
     world   = global_R_inv @ (cam_mat - global_tvec)
-    return float(world[0]), float(world[1]), float(world[2])
+    return float(world[0].item()), float(world[1].item()), float(world[2].item())
 
 # ---------------------------------------------------------------------------
 # TRY TO LOAD SAVED CALIBRATION

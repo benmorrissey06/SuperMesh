@@ -16,6 +16,12 @@
       failed_when: false
       become: no
 
+    - name: delete old calibration data (forcing re-calibration)
+      file:
+        path: "/home/{{ ansible_user }}/supermesh_calib.json"
+        state: absent
+      become: no
+
     - name: verify script exists
       stat:
         path: "{{ script_path }}"
