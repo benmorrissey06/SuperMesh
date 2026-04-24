@@ -1,3 +1,4 @@
+# --- SET YOUR MASTER MACHINE IP IN THE 'master_ip' VARIABLE BELOW TO RECEIVE TRACKING DATA (currently set to 10.10.10.3) ---
 """
 SuperMesh — headless_script.py (Node)
 Runs on each Beelink. Two phases:
@@ -47,8 +48,7 @@ device_ip = get_ip().replace(".", "_")
 if len(sys.argv) > 1:
     master_ip = sys.argv[1]
 else:
-    master_ip = "10.10.10.9" \
-    ""
+    master_ip = "10.10.10.3"
 
 OSC_PORT_OUT = 9001   # port Master listens on
 OSC_PORT_IN  = 9003   # port this node listens on
