@@ -14,7 +14,7 @@
 #   - YOLOv8n model pre-downloaded so first run isn't slow
 
 - name: Install SuperMesh tracking dependencies on Beelink nodes
-  hosts: beelinks
+  hosts: bees
   become: true
 
   vars:
