@@ -12,10 +12,9 @@
 #       ultralytics            — YOLOv8 (pulls in torch, torchvision automatically)
 #       numpy                  — matrix math
 #   - YOLOv8n model pre-downloaded so first run isn't slow
-# This is yolo stuff
 
 - name: Install SuperMesh tracking dependencies on Beelink nodes
-  hosts: bees
+  hosts: beelinks
   become: true
 
   vars:
@@ -45,17 +44,26 @@
 
     # ------------------------------------------------------------------
     # INTEL REALSENSE SDK (librealsense2)
-    # The pip package pyrealsense2 bundles its own native lib for x86,
-    # but registering Intel's apt repo gives you firmware tools too.
+    # Uses the modern gpg dearmor method (apt-key is deprecated in
+    # Ubuntu 22.04+ / Debian 12+).
     # ------------------------------------------------------------------
-    - name: Add Intel RealSense apt key
-      apt_key:
-        url: https://librealsense.intel.com/Debian/librealsense.pgp
+    - name: Install curl and gpg (needed for key download)
+      apt:
+        name:
+          - curl
+          - gpg
         state: present
 
-    - name: Add Intel RealSense apt repo
+    - name: Download Intel RealSense GPG key
+      shell: |
+        curl -fsSL https://librealsense.intel.com/Debian/librealsense.pgp \
+          | gpg --dearmor -o /usr/share/keyrings/librealsense.gpg
+      args:
+        creates: /usr/share/keyrings/librealsense.gpg
+
+    - name: Add Intel RealSense apt repo (signed-by)
       apt_repository:
-        repo: "deb https://librealsense.intel.com/Debian/apt-repo {{ ansible_distribution_release }} main"
+        repo: "deb [signed-by=/usr/share/keyrings/librealsense.gpg] https://librealsense.intel.com/Debian/apt-repo {{ ansible_distribution_release }} main"
         state: present
         filename: librealsense
 
