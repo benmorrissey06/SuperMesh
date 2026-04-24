@@ -1,7 +1,7 @@
 ---
 # install_tracking.yml
 # Installs all SuperMesh node dependencies on every Beelink.
-# Run from your Mac: ansible-playbook -i config/bees.ini setup/install_tracking.yml
+# Run from your Mac: ansible-playbook -i config/bees.ini setup/install_tracking.yml -K
 #
 # NOTE: We skip Intel's librealsense apt repo — it returns 403 on Ubuntu "questing".
 # The pip package pyrealsense2 bundles its own native libs and is all we need.
