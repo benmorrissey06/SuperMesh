@@ -12,6 +12,7 @@
 #       ultralytics            — YOLOv8 (pulls in torch, torchvision automatically)
 #       numpy                  — matrix math
 #   - YOLOv8n model pre-downloaded so first run isn't slow
+# This is yolo stuff
 
 - name: Install SuperMesh tracking dependencies on Beelink nodes
   hosts: beelinks
