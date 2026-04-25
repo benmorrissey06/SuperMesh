@@ -11,10 +11,15 @@
     script_path: "/home/{{ ansible_user }}/SuperMesh/concepts/headless_script.py"
 
   tasks:
-    - name: stop any old headless scripts
-      shell: "pkill -f [h]eadless_script.py"
-      failed_when: false
-      become: no
+- name: stop any old headless scripts
+  shell: |
+    pkill -9 -f headless_script.py || true
+    pkill -9 -f charuco_test.py || true
+    fuser -k 9003/udp || true
+    fuser -k 9001/udp || true
+    sleep 2
+  become: yes
+  ignore_errors: yes
 
     - name: delete old calibration data (forcing re-calibration)
       file:

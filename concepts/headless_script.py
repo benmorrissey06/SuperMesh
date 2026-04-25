@@ -125,6 +125,7 @@ threading.Thread(target=osc_server.serve_forever, daemon=True).start()
 aruco_dict       = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_100)
 board            = cv2.aruco.CharucoBoard((SQUARES_X, SQUARES_Y), SQUARE_LENGTH, MARKER_LENGTH, aruco_dict)
 charuco_detector = cv2.aruco.CharucoDetector(board)
+ROOM_NORTH = np.array([0.0, 0.0, 1.0])
 
 def find_floor_normal(depth_frame, intrinsics, depth_scale):
     """Sample depth points around the board area and fit a plane to find true floor normal."""
@@ -318,11 +319,17 @@ try:
                             true_y = floor_normal / np.linalg.norm(floor_normal)
 
                             # Recompute X and Z orthogonal to corrected Y
-                            approx_z = R_matrix[:, 2]
-                            true_x = np.cross(true_y, approx_z)
+                            room_north_cam = R_matrix @ ROOM_NORTH  # bring room north into camera space
+                            room_north_floor = room_north_cam - np.dot(room_north_cam, true_y) * true_y
+                            if np.linalg.norm(room_north_floor) < 0.1:
+                                # Degenerate case - fall back to camera forward
+                                remote_print("WARNING: ROOM_NORTH is parallel to floor normal, using camera forward")
+                                room_north_floor = R_matrix[:, 2]
+                                room_north_floor = room_north_floor - np.dot(room_north_floor, true_y) * true_y
+
+                            true_z = room_north_floor / np.linalg.norm(room_north_floor)
+                            true_x = np.cross(true_y, true_z)
                             true_x = true_x / np.linalg.norm(true_x)
-                            true_z = np.cross(true_x, true_y)
-                            true_z = true_z / np.linalg.norm(true_z)
 
                             R_corrected = np.column_stack([true_x, true_y, true_z])
                             corrected_rvec = cv2.Rodrigues(R_corrected)[0]
