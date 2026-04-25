@@ -126,6 +126,37 @@ aruco_dict       = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_100)
 board            = cv2.aruco.CharucoBoard((SQUARES_X, SQUARES_Y), SQUARE_LENGTH, MARKER_LENGTH, aruco_dict)
 charuco_detector = cv2.aruco.CharucoDetector(board)
 
+def find_floor_normal(depth_frame, intrinsics, depth_scale):
+    """Sample depth points around the board area and fit a plane to find true floor normal."""
+    depth_image = np.asanyarray(depth_frame.get_data())
+    h, w = depth_image.shape
+    
+    # Sample a grid of points from the lower half of the frame (floor area)
+    points = []
+    for y in range(h//2, h, 20):
+        for x in range(w//4, 3*w//4, 20):
+            d = depth_image[y, x] * depth_scale
+            if 0.3 < d < 4.0:
+                pt = rs.rs2_deproject_pixel_to_point(intrinsics, [x, y], d)
+                points.append(pt)
+    
+    if len(points) < 20:
+        return None
+        
+    points = np.array(points)
+    
+    # Fit a plane using SVD
+    centroid = points.mean(axis=0)
+    centered = points - centroid
+    _, _, Vt = np.linalg.svd(centered)
+    normal = Vt[-1]  # normal to best-fit plane
+    
+    # Make sure normal points "up" (away from camera, toward ceiling)
+    if normal[1] > 0:
+        normal = -normal
+        
+    return normal, centroid
+
 # ---------------------------------------------------------------------------
 # REALSENSE PIPELINE
 # ---------------------------------------------------------------------------
@@ -234,7 +265,7 @@ try:
         depth_image = np.asanyarray(depth_frame.get_data())
         h_img, w_img = frame.shape[:2]
 
-        # ======================================================================
+# ======================================================================
         # PHASE 1: CALIBRATION
         # Collects CALIB_FRAMES_NEEDED good detections then averages them.
         # Each node calibrates independently — no need to sync across cameras.
@@ -253,13 +284,54 @@ try:
                 )
 
                 if ok:
-                    # Accumulate this frame's result
                     if force_calibrate or len(calib_rvecs) > 0:
-                        # Only start collecting once master says go
                         if force_calibrate and len(calib_rvecs) == 0:
                             remote_print(f"Collecting {CALIB_FRAMES_NEEDED} calibration frames...")
 
-                        calib_rvecs.append(rvec)
+                        # --- FLOOR NORMAL CONSTRAINT ---
+                        # Sample depth points to find the true floor plane,
+                        # then use that to correct the Y axis so it always
+                        # points up regardless of camera tilt angle.
+                        floor_points = []
+                        for fy in range(depth_image.shape[0] // 2, depth_image.shape[0], 20):
+                            for fx in range(depth_image.shape[1] // 4, 3 * depth_image.shape[1] // 4, 20):
+                                d = depth_image[fy, fx] * depth_scale
+                                if 0.3 < d < 4.0:
+                                    pt = rs.rs2_deproject_pixel_to_point(intrinsics, [fx, fy], d)
+                                    floor_points.append(pt)
+
+                        if len(floor_points) >= 20:
+                            floor_pts_np = np.array(floor_points)
+                            centroid = floor_pts_np.mean(axis=0)
+                            centered = floor_pts_np - centroid
+                            _, _, Vt_floor = np.linalg.svd(centered)
+                            floor_normal = Vt_floor[-1]
+
+                            # Ensure normal points away from floor toward ceiling.
+                            # In camera space, Y increases downward, so the ceiling-
+                            # facing normal should have a negative Y component.
+                            if floor_normal[1] > 0:
+                                floor_normal = -floor_normal
+
+                            # Rebuild rotation matrix with true_y = floor normal
+                            R_matrix, _ = cv2.Rodrigues(rvec)
+                            true_y = floor_normal / np.linalg.norm(floor_normal)
+
+                            # Recompute X and Z orthogonal to corrected Y
+                            approx_z = R_matrix[:, 2]
+                            true_x = np.cross(true_y, approx_z)
+                            true_x = true_x / np.linalg.norm(true_x)
+                            true_z = np.cross(true_x, true_y)
+                            true_z = true_z / np.linalg.norm(true_z)
+
+                            R_corrected = np.column_stack([true_x, true_y, true_z])
+                            corrected_rvec = cv2.Rodrigues(R_corrected)[0]
+                            calib_rvecs.append(corrected_rvec)
+                        else:
+                            # Not enough floor points — fall back to raw solvePnP result
+                            remote_print("WARNING: Not enough floor points for floor constraint, using raw rvec")
+                            calib_rvecs.append(rvec)
+
                         calib_tvecs.append(tvec)
 
                     # Enough frames collected — average and lock in
