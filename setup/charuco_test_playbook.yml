@@ -11,15 +11,33 @@
     script_path: "/home/{{ ansible_user }}/SuperMesh/concepts/headless_script.py"
 
   tasks:
-- name: stop any old headless scripts
-  shell: |
-    pkill -9 -f headless_script.py || true
-    pkill -9 -f charuco_test.py || true
-    fuser -k 9003/udp || true
-    fuser -k 9001/udp || true
-    sleep 2
-  become: yes
-  ignore_errors: yes
+    - name: kill headless script processes
+      shell: pkill -9 -f "headless_scr" || true
+      become: yes
+      ignore_errors: yes
+
+    - name: kill charuco test processes  
+      shell: pkill -9 -f "charuco_te" || true
+      become: yes
+      ignore_errors: yes
+
+    - name: wait for ports to release
+      pause:
+        seconds: 2
+
+    - name: free port 9003
+      shell: fuser -k 9003/udp || true
+      become: yes
+      ignore_errors: yes
+
+    - name: free port 9001
+      shell: fuser -k 9001/udp || true
+      become: yes
+      ignore_errors: yes
+
+    - name: wait after port release
+      pause:
+        seconds: 1
 
     - name: delete old calibration data (forcing re-calibration)
       file:
