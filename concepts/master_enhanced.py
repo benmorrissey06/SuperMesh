@@ -197,7 +197,11 @@ def start_master():
 
         # KEY COMMANDS
         key = cv2.waitKey(30) & 0xFF
-        if key == ord('q'): break
+        if key == ord('q'): 
+            print("Blasting QUIT command to Beelink nodes...")
+            for client in bee_clients: 
+                client.send_message("/quit", 1)  # Sends a shutdown signal to the nodes
+            break
         elif key == ord('='): scale = max(1.0, scale - 0.5) # Zoom in
         elif key == ord('-'): scale += 0.5                  # Zoom out
         elif key == ord('0'): offset_x = offset_z = 0.0; scale = 8.0 # Reset

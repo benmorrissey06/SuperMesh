@@ -110,9 +110,8 @@ def calibrate_handler(address, *args):
     force_calibrate = True
 
 def quit_handler(address, *args):
-    global keep_running
-    remote_print("[OSC] QUIT command received. Shutting down...")
-    keep_running = False
+    remote_print("[OSC] QUIT command received. Forcing immediate shutdown...")
+    os._exit(0)  # Hard kill to prevent pyrealsense2 from deadlocking on exit
 
 dispatcher = Dispatcher()
 dispatcher.map("/calibrate", calibrate_handler)
