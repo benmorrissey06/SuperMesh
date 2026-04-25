@@ -264,12 +264,13 @@ try:
 
                     # Enough frames collected — average and lock in
                     if len(calib_rvecs) >= CALIB_FRAMES_NEEDED:
-                        avg_rvec = np.mean(calib_rvecs, axis=0)
-                        avg_tvec = np.mean(calib_tvecs, axis=0)
+                        R_matrices = [cv2.Rodrigues(r)[0] for r in calib_rvecs]
+                        avg_R = np.mean(R_matrices, axis=0)
+                        U, _, Vt = np.linalg.svd(avg_R)
+                        avg_R = U @ Vt  # re-orthogonalize
 
-                        R_matrix, _ = cv2.Rodrigues(avg_rvec)
-                        global_R_inv = R_matrix.T
-                        global_tvec  = avg_tvec
+                        global_R_inv = avg_R.T
+                        global_tvec  = np.mean(calib_tvecs, axis=0)
 
                         is_calibrated = True
                         force_calibrate = False
@@ -336,6 +337,9 @@ try:
                     continue
 
                 gx, gy, gz = pixel_to_global(foot_x, foot_y, depth_m)
+
+                if not (-10 < gx < 10 and -10 < gz < 10):
+                    continue  # bad calibration artifact, discard
 
                 for client in clients:
                     try:

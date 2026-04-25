@@ -64,12 +64,19 @@ class TrackedPerson:
         self.missed_frames = 0
 
 # --- OSC RECEIVER ---
+# --- OSC RECEIVER ---
 def osc_handler(address, *args):
     node_ip = next((ip for ip in ALLOWED_BEE_IPS if ip in address), None)
     if not node_ip: return
 
     if ("person" in address or "blob" in address) and len(args) >= 3:
-        raw_camera_points[address] = [args[0], args[1], args[2], time.time(), node_ip]
+        x, y, z = args[0], args[1], args[2]
+        
+        # --- NEW: PROTECT AGAINST NaN VALUES ---
+        if math.isnan(x) or math.isnan(y) or math.isnan(z):
+            return  # Silently drop this corrupt packet
+            
+        raw_camera_points[address] = [x, y, z, time.time(), node_ip]
         camera_statuses[node_ip] = "Tracking"
     elif "status" in address and len(args) == 1:
         camera_statuses[node_ip] = args[0]
@@ -101,12 +108,12 @@ def start_master():
         
         # 2. Strong Clustering (Merge multiple camera views into single person clusters)
         clusters = [] 
-        for addr, p in raw_camera_points.items():
+        for addr, p in list(raw_camera_points.items()):
             matched = False
             pt = np.array([p[0], p[1], p[2]])
             for cluster in clusters:
                 center = np.array([cluster[0], cluster[1], cluster[2]])
-                if np.linalg.norm(pt - center) < CLUSTER_RADIUS:
+                if np.linalg.norm(np.array([pt[0]-center[0], pt[2]-center[2]])) < CLUSTER_RADIUS:
                     # Rolling average for the cluster center
                     count = cluster[4]
                     cluster[0] = (cluster[0] * count + p[0]) / (count + 1)
@@ -125,7 +132,7 @@ def start_master():
             best_match, best_dist = None, 1.8 # allow 1.8m jump max
             c_pt = np.array([c[0], c[1], c[2]])
             for person in active_people:
-                dist = np.linalg.norm(c_pt - np.array([person.x, person.y, person.z]))
+                dist = math.sqrt((c_pt[0]-person.x)**2 + (c_pt[2]-person.z)**2)
                 if dist < best_dist:
                     best_match, best_dist = person, dist
             
@@ -157,7 +164,7 @@ def start_master():
             cv2.line(canvas, (x1, z1), (x2, z2), (20, 20, 20), 1)
 
         # Draw RAW camera points (dots)
-        for addr, p in raw_camera_points.items():
+        for addr, p in list(raw_camera_points.items()):
             rx, rz = meters_to_pixels(p[0], p[2])
             color = NODE_COLORS.get(p[4], (100, 100, 100))
             cv2.circle(canvas, (rx, rz), 4, color, -1)
