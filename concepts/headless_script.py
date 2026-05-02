@@ -125,7 +125,7 @@ threading.Thread(target=osc_server.serve_forever, daemon=True).start()
 aruco_dict       = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_100)
 board            = cv2.aruco.CharucoBoard((SQUARES_X, SQUARES_Y), SQUARE_LENGTH, MARKER_LENGTH, aruco_dict)
 charuco_detector = cv2.aruco.CharucoDetector(board)
-ROOM_NORTH = np.array([0.0, 0.0, 1.0])
+ROOM_NORTH = np.array([1.0, 0.0, 0.0])
 
 def find_floor_normal(depth_frame, intrinsics, depth_scale):
     """Sample depth points around the board area and fit a plane to find true floor normal."""
