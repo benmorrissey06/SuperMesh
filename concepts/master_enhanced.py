@@ -26,6 +26,11 @@ NODE_COLORS = {
     "10_10_10_22": (255, 0, 255)  # Magenta
 }
 
+PD_IP   = "127.0.0.1"  # change if Pd is on a different machine
+PD_PORT = 9005
+
+pd_client = SimpleUDPClient(PD_IP, PD_PORT)
+
 BEELINK_PORT = 9003
 bee_clients  = [SimpleUDPClient(ip.replace("_", "."), BEELINK_PORT) for ip in ALLOWED_BEE_IPS]
 
@@ -151,6 +156,10 @@ def start_master():
                 new_active_list.append(p)
         active_people = new_active_list
 
+        for p in active_people:
+            if p.missed_frames == 0:  # only send confirmed detections, not ghosts
+            pd_client.send_message(f"/person/{p.id}", [p.x, p.z])
+            
         # --- DRAWING ---
         canvas = np.zeros((MAP_SIZE, MAP_SIZE, 3), dtype=np.uint8)
         
