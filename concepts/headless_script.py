@@ -368,14 +368,14 @@ try:
 
                 gx, gy, gz = pixel_to_global(foot_x, foot_y, depth_m)
 
-                if not (-10 < gx < 10 and -10 < gz < 10):
+                if not (-10 < gx < 10 and -10 < gy < 10):
                     continue  # bad calibration artifact, discard
 
                 for client in clients:
                     try:
                         client.send_message(
                             OSC_ADDRESS + f"/{person_count}",
-                            [gx, gy, gz, conf]   # includes confidence score
+                            [gx, gz, gy, conf]   # includes confidence score
                         )
                     except BlockingIOError:
                         pass
