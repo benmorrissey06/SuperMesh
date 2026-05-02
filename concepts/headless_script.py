@@ -289,57 +289,8 @@ try:
                         if force_calibrate and len(calib_rvecs) == 0:
                             remote_print(f"Collecting {CALIB_FRAMES_NEEDED} calibration frames...")
 
-                        # --- FLOOR NORMAL CONSTRAINT ---
-                        # Sample depth points to find the true floor plane,
-                        # then use that to correct the Y axis so it always
-                        # points up regardless of camera tilt angle.
-                        floor_points = []
-                        for fy in range(depth_image.shape[0] // 2, depth_image.shape[0], 20):
-                            for fx in range(depth_image.shape[1] // 4, 3 * depth_image.shape[1] // 4, 20):
-                                d = depth_image[fy, fx] * depth_scale
-                                if 0.3 < d < 4.0:
-                                    pt = rs.rs2_deproject_pixel_to_point(intrinsics, [fx, fy], d)
-                                    floor_points.append(pt)
-
-                        if len(floor_points) >= 20:
-                            floor_pts_np = np.array(floor_points)
-                            centroid = floor_pts_np.mean(axis=0)
-                            centered = floor_pts_np - centroid
-                            _, _, Vt_floor = np.linalg.svd(centered)
-                            floor_normal = Vt_floor[-1]
-
-                            # Ensure normal points away from floor toward ceiling.
-                            # In camera space, Y increases downward, so the ceiling-
-                            # facing normal should have a negative Y component.
-                            if floor_normal[1] > 0:
-                                floor_normal = -floor_normal
-
-                            # Rebuild rotation matrix with true_y = floor normal
-                            R_matrix, _ = cv2.Rodrigues(rvec)
-                            true_y = floor_normal / np.linalg.norm(floor_normal)
-
-                            # Recompute X and Z orthogonal to corrected Y
-                            room_north_cam = R_matrix @ ROOM_NORTH  # bring room north into camera space
-                            room_north_floor = room_north_cam - np.dot(room_north_cam, true_y) * true_y
-                            if np.linalg.norm(room_north_floor) < 0.1:
-                                # Degenerate case - fall back to camera forward
-                                remote_print("WARNING: ROOM_NORTH is parallel to floor normal, using camera forward")
-                                room_north_floor = R_matrix[:, 2]
-                                room_north_floor = room_north_floor - np.dot(room_north_floor, true_y) * true_y
-
-                            true_z = room_north_floor / np.linalg.norm(room_north_floor)
-                            true_x = np.cross(true_y, true_z)
-                            true_x = true_x / np.linalg.norm(true_x)
-
-                            R_corrected = np.column_stack([true_x, true_y, true_z])
-                            corrected_rvec = cv2.Rodrigues(R_corrected)[0]
-                            calib_rvecs.append(corrected_rvec)
-                        else:
-                            # Not enough floor points — fall back to raw solvePnP result
-                            remote_print("WARNING: Not enough floor points for floor constraint, using raw rvec")
-                            calib_rvecs.append(rvec)
-
-                        calib_tvecs.append(tvec)
+                    calib_rvecs.append(rvec)
+                    calib_tvecs.append(tvec)
 
                     # Enough frames collected — average and lock in
                     if len(calib_rvecs) >= CALIB_FRAMES_NEEDED:
