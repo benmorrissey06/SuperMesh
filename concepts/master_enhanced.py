@@ -158,7 +158,7 @@ def start_master():
 
         for p in active_people:
             if p.missed_frames == 0:  # only send confirmed detections, not ghosts
-            pd_client.send_message(f"/person/{p.id}", [p.x, p.z])
+                pd_client.send_message(f"/person/{p.id}", [p.x, p.z])
             
         # --- DRAWING ---
         canvas = np.zeros((MAP_SIZE, MAP_SIZE, 3), dtype=np.uint8)
