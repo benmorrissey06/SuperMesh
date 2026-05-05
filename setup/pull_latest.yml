@@ -13,7 +13,6 @@
       ansible.builtin.apt:
         name: git
         state: present
-        update_cache: yes
       become: yes
 
     - name: clone or pull the latest changes

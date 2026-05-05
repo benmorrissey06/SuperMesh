@@ -4,6 +4,7 @@
 # Controls: Arrows to Pan, +/- to Zoom, 'O' to Re-center on detected persons.
 # Note: This is significantly more accurate than the legacy blob-detection version.
 
+from itertools import count
 import time
 import math
 import numpy as np
@@ -28,6 +29,7 @@ NODE_COLORS = {
 
 PD_IP   = "127.0.0.1"  # change if Pd is on a different machine
 PD_PORT = 9005
+pd_people_count = 0
 
 pd_client = SimpleUDPClient(PD_IP, PD_PORT)
 
@@ -89,8 +91,8 @@ def osc_handler(address, *args):
 # --- MAPPING MATH ---
 def meters_to_pixels(x, z):
     # Apply pan and scale
-    px = int(((x + offset_x) / scale) * (MAP_SIZE) + (MAP_SIZE / 2))
-    pz = int(((z + offset_z) / scale) * (MAP_SIZE) + (MAP_SIZE / 2))
+    px = int(((-z + offset_x) / scale) * (MAP_SIZE) + (MAP_SIZE / 2))
+    pz = int(((x + offset_z) / scale) * (MAP_SIZE) + (MAP_SIZE / 2))
     return px, pz
 
 def start_master():
@@ -156,9 +158,15 @@ def start_master():
                 new_active_list.append(p)
         active_people = new_active_list
 
-        for p in active_people:
-            if p.missed_frames == 0:  # only send confirmed detections, not ghosts
-                pd_client.send_message(f"/person/{p.id}", [p.x, p.z])
+        # Send confirmed people to PD
+        global pd_people_count
+        confirmed = [p for p in active_people if p.missed_frames == 0]
+        count = len(confirmed)
+        if count != pd_people_count:
+            pd_client.send_message("/people", count)
+            pd_people_count = count
+        for i, p in enumerate(confirmed, start=1):
+            pd_client.send_message("/person", [float(i), p.x, p.z])
             
         # --- DRAWING ---
         canvas = np.zeros((MAP_SIZE, MAP_SIZE, 3), dtype=np.uint8)
@@ -193,11 +201,11 @@ def start_master():
             # Dot & Label
             dot_color = (0, 255, 0) if p.missed_frames == 0 else (0, 60, 0)
             cv2.circle(canvas, (px, pz), 15, dot_color, -1)
-            cv2.putText(canvas, f"ID:{p.id}", (px + 20, pz - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-            cv2.putText(canvas, f"Z: {p.z:.1f}m", (px + 20, pz + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (180, 180, 180), 1)
+            #cv2.putText(canvas, f"ID:{p.id}", (px + 20, pz - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            cv2.putText(canvas, f"Z: {p.z:.1f}m X: {p.x:.1f}m", (px + 20, pz + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (180, 180, 180), 1)
 
         # UI Overlay
-        cv2.putText(canvas, "SUPERMESH FLEET MONITOR", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+        cv2.putText(canvas, "DEPTH CAMERA TRACKING FEED", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
         y_off = 80
         for ip in ALLOWED_BEE_IPS:
             status = camera_statuses[ip]
@@ -217,7 +225,9 @@ def start_master():
             print("Blasting QUIT command to Beelink nodes...")
             for client in bee_clients: 
                 client.send_message("/quit", 1)  # Sends a shutdown signal to the nodes
+            pd_client.send_message("/quit", 1)   # Optional: signal Pd to stop if needed
             break
+            
         elif key == ord('='): scale = max(1.0, scale - 0.5) # Zoom in
         elif key == ord('-'): scale += 0.5                  # Zoom out
         elif key == ord('0'): offset_x = offset_z = 0.0; scale = 8.0 # Reset
