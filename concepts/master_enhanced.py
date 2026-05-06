@@ -136,6 +136,8 @@ def start_master():
         # 3. ID Matching (Link clusters to persistent TrackedPerson objects)
         new_active_list = []
         for c in clusters:
+            if c[4] < 2:
+                continue  # Ignore clusters with only 1 dot (noise/jitter)
             best_match, best_dist = None, 1.8 # allow 1.8m jump max
             c_pt = np.array([c[0], c[1], c[2]])
             for person in active_people:

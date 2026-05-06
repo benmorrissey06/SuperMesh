@@ -2,7 +2,7 @@
 # it kills any old versions first so they dont conflict
 
 # command is below, but make sure to run pull_latest.yml first to get the script on there
-# env ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i config/bees.ini setup/charuco_test_playbook.yml -k -K
+# env ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i config/bees.ini setup/hard_restart.yml -k -K
 ---
 - hosts: all
   gather_facts: yes  # Required to access the SSH_CONNECTION environment variable
